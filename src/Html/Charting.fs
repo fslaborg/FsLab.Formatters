@@ -42,6 +42,11 @@ let applyChartStylePostCreation (ch:GenericChart) =
     for a in cha.Axes do
       a.LineColor <- gridlines
 
+  // if back color is transparant (as set in `applyChartStyle`), don't use antialiasing for texts otherwise they'll be overly bold
+  // see: http://stackoverflow.com/a/8587694/695964
+  if wch.BackColor = System.Drawing.Color.Transparent then
+    wch.AntiAliasing <- DataVisualization.Charting.AntiAliasingStyles.Graphics
+
 open System
 let shouldEmbedImage () =
     Environment.GetEnvironmentVariable("FSLAB_CHARTING_EMBED")
