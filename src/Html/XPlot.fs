@@ -64,7 +64,7 @@ let googleLoad = """<script type="text/javascript">
   </script>"""
 
 fsi.AddHtmlPrinter(fun (chart:XPlot.GoogleCharts.GoogleChart) ->
-  let ch = chart |> XPlot.GoogleCharts.Chart.WithSize (800, 450) |> applyTheme
+  let ch = chart |> applyTheme
   seq [ "script", googleJsapi; "script", googleLoad ], 
   ch.GetInlineHtml())
 

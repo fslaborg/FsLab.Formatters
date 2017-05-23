@@ -42,6 +42,20 @@ let applyChartStylePostCreation (ch:GenericChart) =
     for a in cha.Axes do
       a.LineColor <- gridlines
 
+  // if back color is transparant (as set in `applyChartStyle`), don't use antialiasing for texts otherwise they'll be overly bold
+  // see: http://stackoverflow.com/a/8587694/695964
+  if wch.BackColor = System.Drawing.Color.Transparent then
+    wch.AntiAliasing <- DataVisualization.Charting.AntiAliasingStyles.Graphics
+
+open System
+let shouldEmbedImage () =
+    Environment.GetEnvironmentVariable("FSLAB_CHARTING_EMBED")
+    |> String.IsNullOrEmpty
+    |> not
+
+let encodePngImage (img: byte array) =
+    sprintf "data:image/png;base64,%s" (Convert.ToBase64String(img))
+
 // Register HTML printer for charts
 fsi.AddHtmlPrinter(fun (ch:GenericChart) ->
   use ms = new MemoryStream()
@@ -49,12 +63,16 @@ fsi.AddHtmlPrinter(fun (ch:GenericChart) ->
     use ctl = new ChartControl(nch, Dock = DockStyle.Fill, Width=800, Height=450)
     applyChartStylePostCreation nch
     ch.CopyAsBitmap().Save(ms, System.Drawing.Imaging.ImageFormat.Png) )
-  let url = servePngImage (ms.ToArray())
+  let url = 
+    if (shouldEmbedImage ()) then encodePngImage (ms.ToArray())
+    else servePngImage (ms.ToArray())
   seq [], sprintf "<img src='%s' style='height:450px' />" url)
 
 // Also register HTML printer for images
 fsi.AddHtmlPrinter(fun (img:Image) ->
   use ms = new MemoryStream()
   img.Save(ms, Imaging.ImageFormat.Png)
-  let url = servePngImage (ms.ToArray())
+  let url = 
+    if (shouldEmbedImage ()) then encodePngImage (ms.ToArray())
+    else servePngImage (ms.ToArray())
   seq [], sprintf "<img src='%s' style='width:%dpx; height:%dpx' />" url img.Width img.Height)
