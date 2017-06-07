@@ -75,17 +75,29 @@ fsi.AddHtmlPrinter(fun (chart:XPlot.GoogleCharts.GoogleChart) ->
 
 open XPlot.Plotly
 
-/// Create default Plotly layout with theme colours
-let defaultLayout () =
+/// Use reflection to apply theme colours to a Plotly chart without altering the rest of the layout
+let applyDefaultLayout (ch:XPlot.Plotly.PlotlyChart) =
   let gridlines = Styles.getStyle "background-color-highlighted"
   let background = Styles.getStyle "background-color-alternate"
   let textcolor = Styles.getStyle "text-color"
 
   let x = Xaxis(linecolor=gridlines, gridcolor=gridlines, tickfont=Font(color=textcolor))
   let y = Yaxis(linecolor=gridlines, gridcolor=gridlines, tickfont=Font(color=textcolor))
-  Layout
-    ( plot_bgcolor=background, paper_bgcolor="transparent",
-      xaxis=x, yaxis=y, legend=Legend(font=Font(color=textcolor)) )
+
+  let layout =
+      ch.GetType().GetField(
+          "layout", System.Reflection.BindingFlags.NonPublic |||
+          System.Reflection.BindingFlags.Instance ).GetValue(ch) :?> XPlot.Plotly.Layout.Layout option
+      |> function
+      | Some l -> l
+      | None -> Layout()
+
+  layout.plot_bgcolor <- background
+  layout.paper_bgcolor <- "transparent"
+  layout.xaxis <- x
+  layout.yaxis <- y
+  layout.legend <- Legend(font=Font(color=textcolor))
+  ch
 
 /// Resize the iframe when plotly chart is loaded
 let plotlyLoadScript = """<script type="text/javascript">
@@ -99,7 +111,7 @@ let plotlyLoadScript = """<script type="text/javascript">
 let plotlyCdn = 
   "<script src='https://cdn.plot.ly/plotly-latest.min.js'></script>"
 
-fsi.AddHtmlPrinter(fun (ch:PlotlyChart) ->
-  ch.WithLayout(defaultLayout())
+fsi.AddHtmlPrinter(fun (chart:PlotlyChart) ->
+  let ch = applyDefaultLayout chart
   seq [ "script", plotlyCdn; "script", plotlyLoadScript ],
   ch.GetInlineHtml() )
